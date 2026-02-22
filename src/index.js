@@ -23,7 +23,7 @@ const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-
 const program = new Command();
 
 program
-    .name('create-minions-app')
+    .name('create-minions-toolbox')
     .description('Scaffold a new Minions ecosystem project with established patterns')
     .version(pkg.version)
     .argument('[project-name]', 'Name of the project (e.g., minions-tasks)')
@@ -36,7 +36,7 @@ program
     .option('--license <license>', 'License type', 'MIT')
     .action(async (projectName, options) => {
         console.log('');
-        console.log(chalk.bold.hex('#8B5CF6')('  🚀 create-minions-app'));
+        console.log(chalk.bold.hex('#8B5CF6')('  🚀 create-minions-toolbox'));
         console.log(chalk.dim('  Scaffold a new Minions ecosystem project\n'));
 
         let config;

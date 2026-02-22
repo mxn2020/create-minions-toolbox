@@ -1,4 +1,4 @@
-# create-minions-app
+# create-minions-toolbox
 
 **Scaffold new Minions ecosystem projects in seconds.** Creates a full monorepo with TypeScript SDK, Python SDK, CLI, docs site, blog, and web app — all pre-configured with CI/CD, release automation, and Netlify deployment.
 
@@ -8,10 +8,10 @@
 
 ```bash
 # Interactive mode
-npx create-minions-app
+npx create-minions-toolbox
 
 # Non-interactive mode
-npx create-minions-app --name minions-tasks \
+npx create-minions-toolbox --name minions-tasks \
   --description "Task management for AI agents" \
   --org mxn2020
 ```
