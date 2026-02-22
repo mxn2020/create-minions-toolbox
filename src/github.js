@@ -39,7 +39,7 @@ export async function setupGitHub(config) {
     console.log(chalk.dim('  Initializing git...'));
     execSync('git init', { cwd: projectDir, stdio: 'ignore' });
     execSync('git add .', { cwd: projectDir, stdio: 'ignore' });
-    execSync('git commit -m "chore: initial project scaffold from create-minions-app"', {
+    execSync('git commit -m "chore: initial project scaffold from create-minions-toolbox"', {
         cwd: projectDir,
         stdio: 'ignore',
     });
