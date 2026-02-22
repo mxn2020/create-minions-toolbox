@@ -52,6 +52,10 @@ program
                 projectName = tomlData.name || projectName.replace(/\.toml$/, '');
                 if (tomlData.description) options.description = tomlData.description;
                 if (tomlData.org) options.org = tomlData.org;
+                if (tomlData.colors) {
+                    if (tomlData.colors.accent) options.accent = tomlData.colors.accent;
+                    if (tomlData.colors['accent-hover']) options.accentHover = tomlData.colors['accent-hover'];
+                }
             } catch (err) {
                 console.error(chalk.red(`  Failed to parse TOML file: ${err.message}`));
                 process.exit(1);
@@ -137,6 +141,8 @@ function buildConfigFromFlags(projectName, options) {
         domainApp: `${slug}.minions.wtf`,
         keywords: [slug, 'ai', 'minions'],
         year: new Date().getFullYear().toString(),
+        accentColor: options.accent || '#8B5CF6',
+        accentHoverColor: options.accentHover || '#7C3AED',
         setupGitHub: options.github || false,
         dryRun: options.dryRun || false,
     };

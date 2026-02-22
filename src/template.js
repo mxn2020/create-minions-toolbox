@@ -53,5 +53,7 @@ export function buildVariables(config) {
         year: config.year,
         typescriptSchemas,
         pythonSchemas,
+        accentColor: config.accentColor,
+        accentHoverColor: config.accentHoverColor,
     };
 }

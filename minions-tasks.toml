@@ -1,6 +1,10 @@
 name = "minions-tasks"
 description = "Task management for AI agents"
 
+[colors]
+accent = "#E63946"
+accent-hover = "#C7232F"
+
 [tables.task]
 description = "A unit of work to be executed."
 icon = "⚡"
