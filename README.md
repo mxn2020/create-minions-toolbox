@@ -71,8 +71,10 @@ After scaffolding, a **MANUAL.md** is generated in your project with:
 - GitHub repository secrets (NPM_TOKEN, PYPI_TOKEN)
 - Netlify site setup (3 sites: web, docs, blog)
 - DNS configuration (CNAME records)
-- First npm/PyPI publish commands
-- Release Please verification
+## 6. Release Please
+- First release will be created automatically on merge to `main`
+- Verify `release-please-config.json` paths are correct
+- **Important Configuration:** For Release Please to work, you must enable "Allow GitHub Actions to create and approve pull requests" in your repository's actions settings (`Settings > Actions > General > Workflow permissions`).
 - Branch protection rules
 
 ## Development
