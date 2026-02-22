@@ -1,0 +1,8 @@
+/**
+ * @module {{sdkName}}/schemas
+ * Custom MinionType schemas for {{projectCapitalized}}.
+ */
+
+import type { MinionType } from 'minions-sdk';
+
+{{typescriptSchemas}}

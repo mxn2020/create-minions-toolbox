@@ -1,0 +1,18 @@
+name = "minions-tasks"
+description = "Task management for AI agents"
+
+[tables.task]
+description = "A unit of work to be executed."
+icon = "⚡"
+[tables.task.fields]
+title = "string"
+status = "select"
+completed = "boolean"
+
+[tables.project]
+description = "A project grouping multiple tasks."
+icon = "📁"
+[tables.project.fields]
+name = "string"
+owner = "string"
+deadline = "string"

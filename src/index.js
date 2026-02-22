@@ -8,8 +8,9 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, extname } from 'path';
 import * as dotenv from 'dotenv';
+import { parse } from 'smol-toml';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -39,6 +40,23 @@ program
         console.log(chalk.dim('  Scaffold a new Minions ecosystem project\n'));
 
         let config;
+        let tomlData = null;
+
+        // Check if the argument is a TOML config file
+        if (projectName && extname(projectName) === '.toml') {
+            try {
+                const tomlContent = readFileSync(projectName, 'utf-8');
+                tomlData = parse(tomlContent);
+                console.log(chalk.dim(`  Loaded configuration from ${projectName}`));
+                // Extract project name from the TOML or fallback to the filename without .toml
+                projectName = tomlData.name || projectName.replace(/\.toml$/, '');
+                if (tomlData.description) options.description = tomlData.description;
+                if (tomlData.org) options.org = tomlData.org;
+            } catch (err) {
+                console.error(chalk.red(`  Failed to parse TOML file: ${err.message}`));
+                process.exit(1);
+            }
+        }
 
         if (projectName && options.description) {
             // Non-interactive mode — all required flags provided
@@ -46,6 +64,11 @@ program
         } else {
             // Interactive mode — prompt for missing values
             config = await runInteractivePrompts(projectName, options);
+        }
+
+        // Attach tables if parsed from TOML
+        if (tomlData && tomlData.tables) {
+            config.tables = tomlData.tables;
         }
 
         // Generate the project

@@ -1,14 +1,14 @@
 """
-{{projectCapitalized}} Python SDK
+Minions Tasks Python SDK
 
-{{projectDescription}}
+Task management for AI agents
 """
 
 __version__ = "0.1.0"
 
 
 def create_client(**kwargs):
-    """Create a client for {{projectCapitalized}}.
+    """Create a client for Minions Tasks.
 
     Args:
         **kwargs: Configuration options.

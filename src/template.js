@@ -19,12 +19,16 @@ export function render(content, variables) {
     });
 }
 
+import { generateSchemas } from './schemas.js';
+
 /**
  * Build the flat variables map from a config object.
  * @param {object} config
  * @returns {Record<string, string>}
  */
 export function buildVariables(config) {
+    const { typescriptSchemas, pythonSchemas } = generateSchemas(config);
+
     return {
         projectName: config.projectName,
         projectSlug: config.projectSlug,
@@ -47,5 +51,7 @@ export function buildVariables(config) {
         keywords: config.keywords,
         keywordsJson: JSON.stringify(config.keywords),
         year: config.year,
+        typescriptSchemas,
+        pythonSchemas,
     };
 }
