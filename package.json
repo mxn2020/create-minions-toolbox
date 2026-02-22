@@ -1,0 +1,38 @@
+{
+    "name": "create-minions-app",
+    "version": "1.0.0",
+    "description": "Scaffold new Minions ecosystem projects with established patterns",
+    "type": "module",
+    "license": "MIT",
+    "author": "Mehdi Nabhani <mehdi@the-mehdi.com> (https://the-mehdi.com)",
+    "bin": {
+        "create-minions-app": "./src/index.js"
+    },
+    "main": "./src/index.js",
+    "files": [
+        "src",
+        "templates",
+        "README.md"
+    ],
+    "keywords": [
+        "minions",
+        "scaffold",
+        "cli",
+        "create-app",
+        "generator"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mxn2020/create-minions-app"
+    },
+    "dependencies": {
+        "chalk": "^5.4.1",
+        "commander": "^14.0.3",
+        "fs-extra": "^11.3.0",
+        "inquirer": "^13.2.5",
+        "ora": "^8.2.0"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}
