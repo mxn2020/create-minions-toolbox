@@ -2,37 +2,47 @@
 
 /**
  * {{cliName}} — CLI for {{projectCapitalized}}
+ *
+ * Uses minions-sdk's JsonFileStorageAdapter for sharded, atomic file storage:
+ *   <rootDir>/<id[0..1]>/<id[2..3]>/<id>.json
  */
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
-import { join, resolve } from 'path';
-import { randomUUID } from 'crypto';
+import {
+    createMinion,
+    updateMinion,
+    softDelete,
+    generateId,
+    TypeRegistry,
+} from 'minions-sdk';
+import type { Minion, StorageFilter } from 'minions-sdk';
+import { JsonFileStorageAdapter } from 'minions-sdk/node';
 import { customTypes } from '{{sdkName}}';
 
 const program = new Command();
-const STORE_DIR = resolve(process.env.MINIONS_STORE || '.minions');
+const STORE_DIR = process.env.MINIONS_STORE || '.minions';
 
-function ensureStore() {
-    if (!existsSync(STORE_DIR)) {
-        mkdirSync(STORE_DIR, { recursive: true });
-    }
+// Register custom types
+const registry = new TypeRegistry();
+for (const t of customTypes) {
+    registry.register(t);
 }
 
-function getTypeDir(slug: string) {
-    const dir = join(STORE_DIR, slug);
-    if (!existsSync(dir)) {
-        mkdirSync(dir, { recursive: true });
+// Lazily initialize storage (async)
+let _storage: import('minions-sdk').StorageAdapter | null = null;
+async function getStorage() {
+    if (!_storage) {
+        _storage = await JsonFileStorageAdapter.create(STORE_DIR);
     }
-    return dir;
+    return _storage;
 }
 
 function findType(slug: string) {
-    const type = customTypes.find(t => t.slug === slug);
+    const type = registry.getBySlug(slug);
     if (!type) {
         console.error(chalk.red(`Unknown type: ${slug}`));
-        console.error(chalk.dim(`Available types: ${customTypes.map(t => t.slug).join(', ')}`));
+        console.error(chalk.dim(`Available: ${customTypes.map(t => t.slug).join(', ')}`));
         process.exit(1);
     }
     return type;
@@ -70,7 +80,7 @@ types
         for (const type of customTypes) {
             const fieldCount = type.schema.length;
             console.log(`  ${type.icon}  ${chalk.bold(type.name)} ${chalk.dim(`(${type.slug})`)}`);
-            console.log(`     ${chalk.dim(type.description)}`);
+            console.log(`     ${chalk.dim(type.description || '')}`);
             console.log(`     ${chalk.dim(`${fieldCount} fields: ${type.schema.map(f => f.name).join(', ')}`)}`);
             console.log('');
         }
@@ -82,12 +92,13 @@ types
     .action((slug: string) => {
         const type = findType(slug);
         console.log(`\n  ${type.icon}  ${chalk.bold(type.name)}`);
-        console.log(`  ${chalk.dim(type.description)}`);
+        console.log(`  ${chalk.dim(type.description || '')}`);
         console.log(`  ${chalk.dim(`ID: ${type.id}  Slug: ${type.slug}`)}\n`);
         console.log(chalk.bold('  Fields:\n'));
         for (const field of type.schema) {
             const typeColor = field.type === 'string' ? 'green' : field.type === 'number' ? 'yellow' : field.type === 'boolean' ? 'blue' : 'magenta';
-            console.log(`    ${chalk.dim('•')} ${chalk.bold(field.name)}  ${(chalk as any)[typeColor](field.type)}`);
+            const req = field.required ? chalk.red('*') : ' ';
+            console.log(`    ${req} ${chalk.bold(field.name)}  ${(chalk as any)[typeColor](field.type)}${field.description ? `  ${chalk.dim(field.description)}` : ''}`);
         }
         console.log('');
     });
@@ -98,45 +109,40 @@ program
     .description('Create a new Minion of the specified type')
     .option('-d, --data <json>', 'Field data as JSON string')
     .option('-f, --file <path>', 'Read field data from a JSON file')
-    .option('-t, --title <title>', 'Shortcut: set the title/name field')
-    .option('-s, --status <status>', 'Shortcut: set the status field')
-    .action((typeSlug: string, opts: any) => {
+    .option('-t, --title <title>', 'Minion title')
+    .option('-s, --status <status>', 'Status: active, todo, in_progress, completed, cancelled')
+    .option('-p, --priority <priority>', 'Priority: low, medium, high, urgent')
+    .option('--tags <tags>', 'Comma-separated tags')
+    .action(async (typeSlug: string, opts: any) => {
         const type = findType(typeSlug);
-        ensureStore();
+        const storage = await getStorage();
 
-        let fields: Record<string, any> = {};
-
+        let fields: Record<string, unknown> = {};
         if (opts.file) {
+            const { readFileSync } = await import('fs');
             fields = JSON.parse(readFileSync(opts.file, 'utf-8'));
         } else if (opts.data) {
             fields = JSON.parse(opts.data);
         }
 
-        if (opts.title) {
-            // Set whichever name field exists in the schema
-            const nameField = type.schema.find(f => f.name === 'title') ? 'title' : 'name';
-            fields[nameField] = opts.title;
-        }
-        if (opts.status) fields.status = opts.status;
+        const title = opts.title || (fields as any).title || (fields as any).name || type.name;
+        const tags = opts.tags ? opts.tags.split(',').map((t: string) => t.trim()) : undefined;
 
-        const minion = {
-            id: randomUUID(),
-            type: type.slug,
-            typeName: type.name,
+        const { minion } = createMinion({
+            title,
             fields,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        };
+            status: opts.status || 'active',
+            priority: opts.priority,
+            tags,
+            createdBy: 'cli',
+        }, type);
 
-        const dir = getTypeDir(type.slug);
-        const filePath = join(dir, `${minion.id}.json`);
-        writeFileSync(filePath, JSON.stringify(minion, null, 2));
+        await storage.set(minion);
 
         console.log(chalk.green(`\n  ✔ Created ${type.icon} ${type.name}`));
         console.log(`  ${chalk.dim('ID:')}    ${minion.id}`);
-        console.log(`  ${chalk.dim('File:')}  ${filePath}`);
-        const displayName = fields.title || fields.name || fields.label;
-        if (displayName) console.log(`  ${chalk.dim('Name:')}  ${displayName}`);
+        console.log(`  ${chalk.dim('Title:')} ${minion.title}`);
+        console.log(`  ${chalk.dim('Path:')}  ${STORE_DIR}/${minion.id.replace(/-/g, '').slice(0, 2)}/${minion.id.replace(/-/g, '').slice(2, 4)}/${minion.id}.json`);
         console.log('');
     });
 
@@ -145,41 +151,31 @@ program
     .command('list [type]')
     .alias('ls')
     .description('List all Minions, optionally filtered by type')
+    .option('--status <status>', 'Filter by status')
     .option('--json', 'Output as JSON')
-    .action((typeSlug: string | undefined, opts: any) => {
-        ensureStore();
-
-        const slugs = typeSlug ? [typeSlug] : customTypes.map(t => t.slug);
-        const allMinions: any[] = [];
-
-        for (const slug of slugs) {
-            const dir = join(STORE_DIR, slug);
-            if (!existsSync(dir)) continue;
-            const files = readdirSync(dir).filter(f => f.endsWith('.json'));
-            for (const file of files) {
-                const minion = JSON.parse(readFileSync(join(dir, file), 'utf-8'));
-                allMinions.push(minion);
-            }
+    .option('-n, --limit <n>', 'Max results', parseInt)
+    .action(async (typeSlug: string | undefined, opts: any) => {
+        const storage = await getStorage();
+        const filter: StorageFilter = {};
+        if (typeSlug) {
+            const type = findType(typeSlug);
+            filter.minionTypeId = type.id;
         }
+        if (opts.status) filter.status = opts.status;
+        if (opts.limit) filter.limit = opts.limit;
 
-        if (opts.json) {
-            console.log(JSON.stringify(allMinions, null, 2));
-            return;
-        }
+        const minions = await storage.list(filter);
 
-        if (allMinions.length === 0) {
-            console.log(chalk.dim('\n  No Minions found.\n'));
-            return;
-        }
+        if (opts.json) { console.log(JSON.stringify(minions, null, 2)); return; }
+        if (minions.length === 0) { console.log(chalk.dim('\n  No Minions found.\n')); return; }
 
-        console.log(chalk.bold(`\n  ${allMinions.length} Minion(s):\n`));
-        for (const m of allMinions) {
-            const type = customTypes.find(t => t.slug === m.type);
+        console.log(chalk.bold(`\n  ${minions.length} Minion(s):\n`));
+        for (const m of minions) {
+            const type = registry.get(m.minionTypeId);
             const icon = type?.icon || '?';
-            const title = m.fields?.title || m.fields?.name || m.fields?.label || chalk.dim('(untitled)');
-            const status = m.fields?.status ? chalk.dim(`[${m.fields.status}]`) : '';
-            console.log(`  ${icon}  ${chalk.bold(title)} ${status}`);
-            console.log(`     ${chalk.dim(m.id)} ${chalk.dim(m.type)}`);
+            const status = m.status ? chalk.dim(`[${m.status}]`) : '';
+            console.log(`  ${icon}  ${chalk.bold(m.title)} ${status}`);
+            console.log(`     ${chalk.dim(m.id)} ${chalk.dim(type?.slug || m.minionTypeId)}`);
         }
         console.log('');
     });
@@ -189,32 +185,28 @@ program
     .command('show <id>')
     .description('Show a Minion by ID')
     .option('--json', 'Output as JSON')
-    .action((id: string, opts: any) => {
-        ensureStore();
+    .action(async (id: string, opts: any) => {
+        const storage = await getStorage();
+        const minion = await storage.get(id);
 
-        for (const type of customTypes) {
-            const filePath = join(STORE_DIR, type.slug, `${id}.json`);
-            if (existsSync(filePath)) {
-                const minion = JSON.parse(readFileSync(filePath, 'utf-8'));
-
-                if (opts.json) {
-                    console.log(JSON.stringify(minion, null, 2));
-                    return;
-                }
-
-                console.log(`\n  ${type.icon}  ${chalk.bold(minion.fields?.title || minion.fields?.name || type.name)}`);
-                console.log(`  ${chalk.dim(`Type: ${minion.type}  ID: ${minion.id}`)}`);
-                console.log(`  ${chalk.dim(`Created: ${minion.createdAt}`)}\n`);
-                console.log(chalk.bold('  Fields:\n'));
-                for (const [key, value] of Object.entries(minion.fields || {})) {
-                    console.log(`    ${chalk.dim('•')} ${chalk.bold(key)}: ${value}`);
-                }
-                console.log('');
-                return;
-            }
+        if (!minion) {
+            console.error(chalk.red(`\n  Minion not found: ${id}\n`));
+            process.exit(1);
         }
-        console.error(chalk.red(`\n  Minion not found: ${id}\n`));
-        process.exit(1);
+
+        if (opts.json) { console.log(JSON.stringify(minion, null, 2)); return; }
+
+        const type = registry.get(minion.minionTypeId);
+        console.log(`\n  ${type?.icon || '?'}  ${chalk.bold(minion.title)}`);
+        console.log(`  ${chalk.dim(`Type: ${type?.slug || minion.minionTypeId}  ID: ${minion.id}`)}`);
+        console.log(`  ${chalk.dim(`Status: ${minion.status || '-'}  Priority: ${minion.priority || '-'}`)}`);
+        console.log(`  ${chalk.dim(`Created: ${minion.createdAt}  Updated: ${minion.updatedAt}`)}`);
+        if (minion.tags?.length) console.log(`  ${chalk.dim(`Tags: ${minion.tags.join(', ')}`)}`);
+        console.log(chalk.bold('\n  Fields:\n'));
+        for (const [key, value] of Object.entries(minion.fields || {})) {
+            console.log(`    ${chalk.dim('•')} ${chalk.bold(key)}: ${value}`);
+        }
+        console.log('');
     });
 
 // ─── update ────────────────────────────────────────────────
@@ -222,111 +214,111 @@ program
     .command('update <id>')
     .description('Update fields on an existing Minion')
     .option('-d, --data <json>', 'Fields to update as JSON')
-    .option('-s, --status <status>', 'Shortcut: update status')
-    .action((id: string, opts: any) => {
-        ensureStore();
+    .option('-s, --status <status>', 'Update status')
+    .option('-p, --priority <priority>', 'Update priority')
+    .option('-t, --title <title>', 'Update title')
+    .option('--tags <tags>', 'Replace tags (comma-separated)')
+    .action(async (id: string, opts: any) => {
+        const storage = await getStorage();
+        const existing = await storage.get(id);
+        if (!existing) {
+            console.error(chalk.red(`\n  Minion not found: ${id}\n`));
+            process.exit(1);
+        }
 
-        for (const type of customTypes) {
-            const filePath = join(STORE_DIR, type.slug, `${id}.json`);
-            if (existsSync(filePath)) {
-                const minion = JSON.parse(readFileSync(filePath, 'utf-8'));
-                let updates: Record<string, any> = {};
+        const updates: any = {};
+        if (opts.data) updates.fields = { ...existing.fields, ...JSON.parse(opts.data) };
+        if (opts.status) updates.status = opts.status;
+        if (opts.priority) updates.priority = opts.priority;
+        if (opts.title) updates.title = opts.title;
+        if (opts.tags) updates.tags = opts.tags.split(',').map((t: string) => t.trim());
 
-                if (opts.data) updates = JSON.parse(opts.data);
-                if (opts.status) updates.status = opts.status;
+        const updated = updateMinion(existing, { ...updates, updatedBy: 'cli' });
+        await storage.set(updated);
 
-                minion.fields = { ...minion.fields, ...updates };
-                minion.updatedAt = new Date().toISOString();
-                writeFileSync(filePath, JSON.stringify(minion, null, 2));
-
-                console.log(chalk.green(`\n  ✔ Updated ${type.icon} ${minion.fields?.title || minion.fields?.name || type.name}`));
-                for (const [key, value] of Object.entries(updates)) {
-                    console.log(`    ${chalk.dim('•')} ${key} → ${value}`);
+        const type = registry.get(updated.minionTypeId);
+        console.log(chalk.green(`\n  ✔ Updated ${type?.icon || '?'} ${updated.title}`));
+        for (const [key, value] of Object.entries(updates)) {
+            if (key === 'fields') {
+                for (const [fk, fv] of Object.entries(value as any)) {
+                    console.log(`    ${chalk.dim('•')} fields.${fk} → ${fv}`);
                 }
-                console.log('');
-                return;
+            } else {
+                console.log(`    ${chalk.dim('•')} ${key} → ${value}`);
             }
         }
-        console.error(chalk.red(`\n  Minion not found: ${id}\n`));
-        process.exit(1);
+        console.log('');
     });
 
 // ─── delete ────────────────────────────────────────────────
 program
     .command('delete <id>')
-    .description('Delete a Minion by ID (sets status to cancelled if possible)')
-    .option('--hard', 'Permanently delete the file')
-    .action((id: string, opts: any) => {
-        ensureStore();
-        const { unlinkSync } = require('fs');
-
-        for (const type of customTypes) {
-            const filePath = join(STORE_DIR, type.slug, `${id}.json`);
-            if (existsSync(filePath)) {
-                if (opts.hard) {
-                    unlinkSync(filePath);
-                    console.log(chalk.yellow(`\n  🗑  Permanently deleted ${id}\n`));
-                } else {
-                    const minion = JSON.parse(readFileSync(filePath, 'utf-8'));
-                    minion.fields.status = 'cancelled';
-                    minion.updatedAt = new Date().toISOString();
-                    writeFileSync(filePath, JSON.stringify(minion, null, 2));
-                    console.log(chalk.yellow(`\n  ✔ Cancelled ${type.icon} ${minion.fields?.title || minion.fields?.name || type.name}`));
-                    console.log(chalk.dim(`    Use --hard to permanently delete\n`));
-                }
-                return;
-            }
+    .description('Soft-delete a Minion (set deletedAt timestamp)')
+    .option('--hard', 'Permanently remove the file from disk')
+    .action(async (id: string, opts: any) => {
+        const storage = await getStorage();
+        const existing = await storage.get(id);
+        if (!existing) {
+            console.error(chalk.red(`\n  Minion not found: ${id}\n`));
+            process.exit(1);
         }
-        console.error(chalk.red(`\n  Minion not found: ${id}\n`));
-        process.exit(1);
+
+        if (opts.hard) {
+            await storage.delete(id);
+            console.log(chalk.yellow(`\n  🗑  Permanently deleted ${id}\n`));
+        } else {
+            const deleted = softDelete(existing, 'cli');
+            await storage.set(deleted);
+            console.log(chalk.yellow(`\n  ✔ Soft-deleted ${existing.title}`));
+            console.log(chalk.dim(`    Use --hard to permanently remove\n`));
+        }
+    });
+
+// ─── search ────────────────────────────────────────────────
+program
+    .command('search <query>')
+    .description('Full-text search across all Minions')
+    .option('--json', 'Output as JSON')
+    .action(async (query: string, opts: any) => {
+        const storage = await getStorage();
+        const results = await storage.search(query);
+
+        if (opts.json) { console.log(JSON.stringify(results, null, 2)); return; }
+        if (results.length === 0) { console.log(chalk.dim(`\n  No results for "${query}".\n`)); return; }
+
+        console.log(chalk.bold(`\n  ${results.length} result(s) for "${query}":\n`));
+        for (const m of results) {
+            const type = registry.get(m.minionTypeId);
+            const icon = type?.icon || '?';
+            const status = m.status ? chalk.dim(`[${m.status}]`) : '';
+            console.log(`  ${icon}  ${chalk.bold(m.title)} ${status}`);
+            console.log(`     ${chalk.dim(m.id)} ${chalk.dim(type?.slug || m.minionTypeId)}`);
+        }
+        console.log('');
     });
 
 // ─── validate ──────────────────────────────────────────────
 program
     .command('validate <file>')
     .description('Validate a JSON file against its MinionType schema')
-    .action((file: string) => {
-        const data = JSON.parse(readFileSync(file, 'utf-8'));
-        const type = customTypes.find(t => t.slug === data.type);
+    .action(async (file: string) => {
+        const { readFileSync } = await import('fs');
+        const { validateFields } = await import('minions-sdk');
+        const data = JSON.parse(readFileSync(file, 'utf-8')) as Minion;
+        const type = registry.get(data.minionTypeId);
 
         if (!type) {
-            console.error(chalk.red(`\n  Unknown type: ${data.type}\n`));
+            console.error(chalk.red(`\n  Unknown type: ${data.minionTypeId}\n`));
             process.exit(1);
         }
 
-        const errors: string[] = [];
-        const schemaFields = type.schema.map(f => f.name);
-        const dataFields = Object.keys(data.fields || {});
-
-        for (const f of schemaFields) {
-            if (!(f in (data.fields || {}))) {
-                errors.push(`Missing field: ${f}`);
-            }
-        }
-
-        for (const f of dataFields) {
-            if (!schemaFields.includes(f)) {
-                errors.push(`Unknown field: ${f}`);
-            }
-        }
-
-        for (const field of type.schema) {
-            const value = data.fields?.[field.name];
-            if (value === undefined) continue;
-            if (field.type === 'number' && typeof value !== 'number') {
-                errors.push(`Field ${field.name} should be number, got ${typeof value}`);
-            }
-            if (field.type === 'boolean' && typeof value !== 'boolean') {
-                errors.push(`Field ${field.name} should be boolean, got ${typeof value}`);
-            }
-        }
-
-        if (errors.length === 0) {
+        const result = validateFields(data.fields, type.schema);
+        if (result.valid) {
             console.log(chalk.green(`\n  ✔ Valid ${type.icon} ${type.name}\n`));
         } else {
-            console.log(chalk.red(`\n  ✘ ${errors.length} validation error(s):\n`));
-            for (const err of errors) {
-                console.log(`    ${chalk.red('•')} ${err}`);
+            console.log(chalk.red(`\n  ✘ ${result.errors.length} validation error(s):\n`));
+            for (const err of result.errors) {
+                console.log(`    ${chalk.red('•')} ${err.field}: ${err.message}`);
             }
             console.log('');
             process.exit(1);
@@ -337,21 +329,17 @@ program
 program
     .command('stats')
     .description('Show statistics about stored Minions')
-    .action(() => {
-        ensureStore();
+    .action(async () => {
+        const storage = await getStorage();
         console.log(chalk.bold('\n  Minion Statistics:\n'));
 
         let total = 0;
         for (const type of customTypes) {
-            const dir = join(STORE_DIR, type.slug);
-            if (!existsSync(dir)) {
-                console.log(`  ${type.icon}  ${type.name.padEnd(22)} ${chalk.dim('0')}`);
-                continue;
-            }
-            const count = readdirSync(dir).filter(f => f.endsWith('.json')).length;
+            const minions = await storage.list({ minionTypeId: type.id });
+            const count = minions.length;
             total += count;
             const bar = chalk.cyan('█'.repeat(Math.min(count, 30)));
-            console.log(`  ${type.icon}  ${type.name.padEnd(22)} ${String(count).padStart(4)}  ${bar}`);
+            console.log(`  ${type.icon}  ${(type.name || '').padEnd(22)} ${String(count).padStart(4)}  ${count > 0 ? bar : chalk.dim('0')}`);
         }
         console.log(`\n  ${chalk.bold('Total:')} ${total} Minion(s)`);
         console.log(`  ${chalk.dim(`Store: ${STORE_DIR}`)}\n`);
