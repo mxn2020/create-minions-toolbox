@@ -1,6 +1,6 @@
 {
     "name": "create-minions-toolbox",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Scaffold new Minions ecosystem projects with established patterns",
     "type": "module",
     "license": "MIT",

@@ -37,7 +37,7 @@ jobs:
         run: pnpm run lint
 
       - name: Build core packages
-        run: pnpm --filter {{sdkName}} run build && pnpm --filter {{cliName}} run build && pnpm --filter {{projectName}}-docs run build && pnpm --filter {{projectName}}-blog run build && pnpm --filter {{projectName}}-web run build
+        run: pnpm --filter {{sdkName}} run build && pnpm --filter {{cliName}} run build && pnpm --filter {{docsName}} run build && pnpm --filter {{blogName}} run build && pnpm --filter {{webName}} run build
 
       - name: Test
         run: pnpm run test

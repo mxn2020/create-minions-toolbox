@@ -1,5 +1,5 @@
 {
-    "name": "{{projectName}}-web",
+    "name": "{{webName}}",
     "version": "0.1.0",
     "private": true,
     "type": "module",
