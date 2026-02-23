@@ -1,6 +1,12 @@
 ---
 name: {{projectName}}
-description: Agent skills for working with {{projectCapitalized}} MinionTypes. Provides CRUD operations, CLI usage, and best practices for AI agents managing {{projectName}} data.
+id: OC-0100
+version: 1.0.0
+description: "Agent skills for working with {{projectCapitalized}} MinionTypes. Provides CRUD operations, CLI usage, and best practices for AI agents managing {{projectName}} data."
+category: ai
+subcategory: general
+tags: ["minion", "ai", "general"]
+comments:
 ---
 
 # {{projectCapitalized}} Agent Skills

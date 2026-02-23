@@ -109,6 +109,8 @@ program
             console.log('');
             console.log(chalk.yellow(`  📖 Read ${chalk.bold('MANUAL.md')} for manual setup steps`));
             console.log(chalk.dim('     (GitHub secrets, Netlify sites, DNS, etc.)\n'));
+            console.log(chalk.dim(`  ☕ Enjoying the Minions ecosystem? Consider buying a coffee:`));
+            console.log(chalk.dim(`     https://buymeacoffee.com/mxn2020\n`));
 
         } catch (err) {
             spinner.fail(chalk.red(`Failed: ${err.message}`));
