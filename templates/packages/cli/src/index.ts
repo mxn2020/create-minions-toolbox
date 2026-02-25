@@ -171,7 +171,7 @@ program
 
         console.log(chalk.bold(`\n  ${minions.length} Minion(s):\n`));
         for (const m of minions) {
-            const type = registry.get(m.minionTypeId);
+            const type = registry.getById(m.minionTypeId);
             const icon = type?.icon || '?';
             const status = m.status ? chalk.dim(`[${m.status}]`) : '';
             console.log(`  ${icon}  ${chalk.bold(m.title)} ${status}`);
@@ -196,7 +196,7 @@ program
 
         if (opts.json) { console.log(JSON.stringify(minion, null, 2)); return; }
 
-        const type = registry.get(minion.minionTypeId);
+        const type = registry.getById(minion.minionTypeId);
         console.log(`\n  ${type?.icon || '?'}  ${chalk.bold(minion.title)}`);
         console.log(`  ${chalk.dim(`Type: ${type?.slug || minion.minionTypeId}  ID: ${minion.id}`)}`);
         console.log(`  ${chalk.dim(`Status: ${minion.status || '-'}  Priority: ${minion.priority || '-'}`)}`);
@@ -233,10 +233,10 @@ program
         if (opts.title) updates.title = opts.title;
         if (opts.tags) updates.tags = opts.tags.split(',').map((t: string) => t.trim());
 
-        const updated = updateMinion(existing, { ...updates, updatedBy: 'cli' });
+        const type = registry.getById(existing.minionTypeId);
+        const { minion: updated } = updateMinion(existing, { ...updates, updatedBy: 'cli' }, type!);
         await storage.set(updated);
 
-        const type = registry.get(updated.minionTypeId);
         console.log(chalk.green(`\n  ✔ Updated ${type?.icon || '?'} ${updated.title}`));
         for (const [key, value] of Object.entries(updates)) {
             if (key === 'fields') {
@@ -288,7 +288,7 @@ program
 
         console.log(chalk.bold(`\n  ${results.length} result(s) for "${query}":\n`));
         for (const m of results) {
-            const type = registry.get(m.minionTypeId);
+            const type = registry.getById(m.minionTypeId);
             const icon = type?.icon || '?';
             const status = m.status ? chalk.dim(`[${m.status}]`) : '';
             console.log(`  ${icon}  ${chalk.bold(m.title)} ${status}`);
@@ -305,7 +305,7 @@ program
         const { readFileSync } = await import('fs');
         const { validateFields } = await import('minions-sdk');
         const data = JSON.parse(readFileSync(file, 'utf-8')) as Minion;
-        const type = registry.get(data.minionTypeId);
+        const type = registry.getById(data.minionTypeId);
 
         if (!type) {
             console.error(chalk.red(`\n  Unknown type: ${data.minionTypeId}\n`));
