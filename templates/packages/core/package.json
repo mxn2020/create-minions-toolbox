@@ -24,7 +24,7 @@
     "docs": "typedoc"
   },
   "dependencies": {
-    "minions-sdk": "^0.2.2"
+    "minions-sdk": "^0.2.4"
   },
   "devDependencies": {
     "@types/node": "^25.3.0",
@@ -33,7 +33,10 @@
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   },
-  "keywords": {{keywordsJson}},
+  "keywords": {
+    {keywordsJson
+    }
+  },
   "license": "{{license}}",
   "repository": {
     "type": "git",

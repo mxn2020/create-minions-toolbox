@@ -1,0 +1,12 @@
+name: minions-tasks-workspace
+description: Task management for AI agents
+tier: idea
+lane: minions
+priority: medium
+oss: true
+stack: [typescript]
+repo: null
+deploy_url: null
+last_active: 2026-02-22
+tags: []
+notes: 

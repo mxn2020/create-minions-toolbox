@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.0 (2026-02-25)
+
+### Features
+
+* bump minions-sdk dependency to ^0.2.4 in scaffolded projects (adds YamlFileStorageAdapter support)
+
 ## 1.0.0 (2026-02-22)
 
 

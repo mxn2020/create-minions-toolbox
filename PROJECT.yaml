@@ -1,0 +1,12 @@
+name: create-minions-toolbox
+description: Scaffold new Minions ecosystem projects with established patterns
+tier: prototype
+lane: minions
+priority: medium
+oss: true
+stack: [javascript]
+repo: "https://github.com/mxn2020/create-minions-toolbox"
+deploy_url: null
+last_active: 2026-02-25
+tags: []
+notes: 
