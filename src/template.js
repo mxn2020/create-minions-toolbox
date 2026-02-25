@@ -19,7 +19,7 @@ export function render(content, variables) {
     });
 }
 
-import { generateSchemas } from './schemas.js';
+import { generateSchemas, generateTests } from './schemas.js';
 
 /**
  * Build the flat variables map from a config object.
@@ -28,6 +28,7 @@ import { generateSchemas } from './schemas.js';
  */
 export function buildVariables(config) {
     const { typescriptSchemas, pythonSchemas } = generateSchemas(config);
+    const typescriptTests = generateTests(config);
 
     return {
         projectName: config.projectName,
@@ -58,5 +59,6 @@ export function buildVariables(config) {
         pythonSchemas,
         accentColor: config.accentColor,
         accentHoverColor: config.accentHoverColor,
+        typescriptTests,
     };
 }

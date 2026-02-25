@@ -81,3 +81,37 @@ export function generateSchemas(config) {
         pythonSchemas: pyCode,
     };
 }
+
+export function generateTests(config) {
+    if (!config || !config.tables || Object.keys(config.tables).length === 0) {
+        return '    // No custom types defined.\n';
+    }
+
+    let testCode = '';
+
+    for (const [key, tableDef] of Object.entries(config.tables)) {
+        const slug = key;
+        const name = slug.charAt(0).toUpperCase() + slug.slice(1).replace(/[-_]/g, ' ');
+        const fields = tableDef.fields || {};
+        const fieldNames = Object.keys(fields);
+        const tsVarName = `${slug.replace(/[-_]/g, '')}Type`;
+
+        testCode += `    it('should define the ${tsVarName} schema correctly', () => {\n`;
+        testCode += `        const type = customTypes.find(t => t.slug === '${slug}');\n`;
+        testCode += `        expect(type).toBeDefined();\n`;
+        testCode += `        expect(type?.name).toBe('${name}');\n`;
+        testCode += `        expect(type?.schema.length).toBe(${fieldNames.length});\n`;
+
+        if (fieldNames.length > 0) {
+            testCode += `        \n`;
+            testCode += `        const fieldNames = type?.schema.map(f => f.name);\n`;
+            for (const fieldName of fieldNames) {
+                testCode += `        expect(fieldNames).toContain('${fieldName}');\n`;
+            }
+        }
+
+        testCode += `    });\n\n`;
+    }
+
+    return testCode.trimEnd();
+}
