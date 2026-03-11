@@ -21,7 +21,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
-    "docs": "typedoc"
+    "docs": "typedoc",
+    "dev": "echo 'no dev'",
+    "stop": "pkill -f 'vite.*core' || true"
   },
   "dependencies": {
     "minions-sdk": "^0.2.2"
@@ -33,7 +35,11 @@
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   },
-  "keywords": ["tasks","ai","minions"],
+  "keywords": [
+    "tasks",
+    "ai",
+    "minions"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

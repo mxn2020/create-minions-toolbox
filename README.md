@@ -1,3 +1,5 @@
+![CI](https://github.com/mxn2020/create-minions-toolbox/actions/workflows/ci.yml/badge.svg) ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 # create-minions-toolbox
 
 **Scaffold new Minions ecosystem projects in seconds.** Creates a full monorepo with TypeScript SDK, Python SDK, CLI, docs site, blog, and web app — all pre-configured with CI/CD, release automation, and Netlify deployment.

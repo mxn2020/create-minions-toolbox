@@ -1,4 +1,7 @@
 name: minions-tasks-workspace
+project_scope: child
+child_type: package
+parent_project: create-minions-toolbox
 description: Task management for AI agents
 tier: idea
 lane: minions
@@ -8,5 +11,7 @@ stack: [typescript]
 repo: null
 deploy_url: null
 last_active: 2026-02-22
-tags: []
-notes: 
+tags: [workspace, tasks, minions, minion, toolbox, ecosystem]
+notes: null
+id: 3d4b4873-cc42-4e13-a656-c4f32f01c34b
+category: minion-toolbox

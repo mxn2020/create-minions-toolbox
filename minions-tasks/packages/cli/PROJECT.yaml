@@ -1,0 +1,9 @@
+name: "@minions-tasks/cli"
+project_scope: child
+child_type: cli
+parent_project: minions-tasks-workspace
+description: CLI for minions-tasks — Task management for AI agents
+priority: high
+deploy_url: null
+tags: [@minions, tasks/cli, npm, package, library]
+category: minion-toolbox

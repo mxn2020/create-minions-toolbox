@@ -1,4 +1,6 @@
 name: create-minions-toolbox
+project_scope: main
+project_type: monorepo
 description: Scaffold new Minions ecosystem projects with established patterns
 tier: prototype
 lane: minions
@@ -8,5 +10,7 @@ stack: [javascript]
 repo: "https://github.com/mxn2020/create-minions-toolbox"
 deploy_url: null
 last_active: 2026-02-25
-tags: []
-notes: 
+tags: [toolbox, minions, create, minion, ecosystem]
+notes: null
+id: 4ead7703-77fa-44d2-8e93-d43d12e039ec
+category: minion-toolbox
